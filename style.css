@@ -46,18 +46,6 @@ main {
 .gift-visuals {
   width: 100%; margin: 4px auto 0; display: grid; place-items: center;
 }
-.portrait-card {
-  position: relative; min-width: 0; width: 100%; max-width: 275px;
-  justify-self: center; margin: 0; padding: 10px 10px 0;
-  background: var(--paper); border: 1px solid #ecd3db99;
-  box-shadow: 0 14px 40px #76364d10, 0 2px 7px #76364d08;
-  transform-origin: top left;
-}
-.portrait-photo { overflow: hidden; aspect-ratio: 3 / 4; background: #f3e4e5; }
-.portrait-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.portrait-card figcaption { padding: 19px 6px 20px; text-align: center; }
-.portrait-dedication { display: block; font: italic clamp(16px, 1.6vw, 21px)/1.45 "Palatino Linotype", Georgia, serif; text-wrap: pretty; }
-.portrait-date { display: block; color: var(--muted); margin-top: 11px; font-size: 10px; line-height: 1.6; }
 main::before {
   content: ''; position: absolute; left: 50%; top: 52%; z-index: -1;
   width: min(90vw, 700px); aspect-ratio: 1;
@@ -154,54 +142,7 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
 .letter-signoff > p:first-child { margin: 0 0 3px; font-size: 12px; color: var(--muted); }
 .letter-signature { font: italic 23px/1.4 "Palatino Linotype", Georgia, serif; margin: 0; overflow-wrap: anywhere; }
 .letter-fold { height: 1px; margin: 8px -30px 2px; background: #ecd3db77; box-shadow: 0 1px 2px #76364d08; }
-.letter-actions { text-align: center; }
-.letter-actions .text-button { padding-block: 8px; }
-.card-status { font-size: 12px; color: var(--muted); text-align: center; margin: 0; line-height: 1.6; }
-.card-status:not(:empty) { padding: 8px 0; }
-.editor-intro { margin: 10px 0; font-size: 12px; color: var(--muted); }
-.editor-title { font-size: 27px; line-height: 1.2; margin: 0 0 26px; }
-#cardEditor label { display: block; font-size: 13px; margin: 18px 0 8px; }
-#cardEditor input, #cardEditor textarea { width: 100%; border: 1px solid #dcb8c5; border-radius: 5px; background: #fff9fb; color: var(--ink); padding: 11px 12px; font-size: 14px; line-height: 1.6; }
-#cardEditor textarea { resize: vertical; min-height: 150px; }
-.editor-hint { font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 14px; }
-.editor-actions { display: flex; align-items: center; gap: 16px; margin: 20px 0 10px; }
-.primary-button { border: 1px solid var(--ink); border-radius: 5px; padding: 12px 20px; font-size: 13px; background: var(--ink); color: var(--paper); }
 .noscript-message { text-align: center; font-size: 14px; }
-/* The album is a second chapter, revealed only after the letter is opened. */
-.memory-album {
-  position: relative; z-index: 3; width: min(100%, 850px); min-width: 0;
-  margin: clamp(32px, 4vw, 54px) auto 8px; text-align: center; scroll-margin-top: 32px;
-  opacity: 0; transform: translateY(24px);
-  transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1);
-}
-.memory-album.is-revealed { opacity: 1; transform: none; }
-.album-heading { margin-bottom: 26px; }
-.album-note { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0 0 12px; }
-#albumTitle { font-size: clamp(26px, 3vw, 34px); line-height: 1.25; margin: 0 0 8px; letter-spacing: -.5px; }
-.album-photos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 18px 18px 14px; }
-.album-card { grid-area: 1 / 1; width: min(100%, 230px); max-width: none; transform-origin: center; }
-.album-card:nth-child(1) { z-index: 3; transform: rotate(-3deg); }
-.album-card:nth-child(2) { z-index: 2; transform: translate(12px, -6px) rotate(7deg); }
-.album-card:nth-child(3) { z-index: 1; transform: translate(-12px, -10px) rotate(-9deg); }
-.album-card .portrait-dedication { font-size: 17px; }
-.album-card figcaption { padding: 16px 4px 18px; }
-.album-card .portrait-date { margin-top: 8px; }
-.album-edit-hint, .album-status { max-width: 520px; margin: 0 auto 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
-.album-status:empty { display: none; }
-.photo-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 0 4px; padding: 0 0 8px; }
-.photo-actions .text-button { min-height: 44px; padding: 10px 6px; }
-.photo-actions button:disabled { opacity: .5; cursor: default; }
-.album-card[aria-busy="true"] .portrait-photo { opacity: .65; }
-.memory-album.is-spread .album-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.memory-album.is-spread .album-card { grid-area: auto; transform: rotate(var(--photo-angle)); animation: photo-unfold .65s cubic-bezier(.2,.8,.2,1) both; }
-.memory-album.is-spread .album-card:nth-child(1) { --photo-angle: -4deg; }
-.memory-album.is-spread .album-card:nth-child(2) { --photo-angle: 2deg; animation-delay: .13s; }
-.memory-album.is-spread .album-card:nth-child(3) { --photo-angle: -2deg; animation-delay: .26s; }
-.album-footnote { margin: 22px 0 0; color: var(--muted); font: italic 15px/1.7 Georgia, serif; }
-@keyframes photo-unfold {
-  from { opacity: 0; transform: translateY(22px) rotate(0); }
-  to { opacity: 1; transform: translateY(0) rotate(var(--photo-angle)); }
-}
 @media (min-width: 1100px) {
   body.card-open .gift-layout { grid-template-columns: minmax(0, 1fr) minmax(400px, 470px); align-items: center; }
   body.card-open .bouquet-composition { width: min(100%, var(--bouquet-size)); }
@@ -216,6 +157,8 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   body.card-open .bouquet-composition { width: min(100%, var(--bouquet-size)); }
 }
 @media (max-width: 600px) {
+  main { padding-top: max(128px, calc(env(safe-area-inset-top) + 80px)); }
+  .garden-link { top: max(64px, calc(env(safe-area-inset-top) + 16px)); }
   .occasion { font-size: 12px; margin-bottom: 8px; }
   .greeting { margin-bottom: 6px; }
   .greeting-caption { font-size: 12px; margin-top: 8px; }
@@ -230,7 +173,46 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   .letter-paper { padding: 18px 24px 10px; }
   .letter-fold { margin-left: -24px; margin-right: -24px; }
   #cardTitle { font-size: 29px; }
-  .memory-album.is-spread .album-photos { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1099px) {
+  main {
+    grid-template-columns: minmax(160px, .9fr) minmax(0, 1.3fr);
+    grid-template-rows: auto auto; gap: 14px 20px; align-items: center;
+    padding: max(16px, env(safe-area-inset-top)) max(24px, calc(env(safe-area-inset-right) + 16px)) max(16px, env(safe-area-inset-bottom)) max(24px, calc(env(safe-area-inset-left) + 16px));
+  }
+  .greeting { grid-column: 1; grid-row: 1; align-self: end; margin: 0 auto; }
+  .occasion { font-size: 11px; margin-bottom: 8px; }
+  h1 { font-size: clamp(22px, 3.3vw, 30px); line-height: 1.15; letter-spacing: -.6px; }
+  .greeting-caption { max-width: 240px; margin: 10px auto 0; font-size: 12px; line-height: 1.6; }
+  .garden-link {
+    position: relative; inset: auto; grid-column: 1; grid-row: 2;
+    align-self: start; justify-self: center; min-height: 44px; padding: 8px 14px; font-size: 12px;
+  }
+  .gift-layout { grid-column: 2; grid-row: 1 / 3; row-gap: 24px; }
+  .gift-visuals { margin: 0; }
+  .bouquet-composition, body.card-open .bouquet-composition {
+    display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; gap: 8px;
+    width: 100%; max-width: 480px; margin: 0 auto;
+  }
+  #bouquetStageWrapper { justify-self: center; max-width: clamp(150px, calc(100dvh - 152px), 280px); }
+  .envelope-button {
+    position: relative; inset: auto; grid-column: 2; grid-row: 1; justify-self: center;
+    width: 112px; transform: none; animation: none;
+  }
+  .envelope { width: 88px; height: 60px; margin-bottom: 8px; }
+  .envelope-seal { top: 22px; }
+  .envelope-caption { font-size: 10px; }
+  .envelope-action { font-size: 12px; }
+  .scene-footer { width: 100%; margin-top: 8px; }
+  .bouquet-hint { font-size: 11px; }
+  .rose-wish { min-height: 0; margin: 4px auto 0; padding: 0; font-size: 14px; line-height: 1.5; }
+  body.card-open main {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: start;
+    padding-top: max(64px, calc(env(safe-area-inset-top) + 16px));
+  }
+  body.card-open .garden-link { grid-column: 1; grid-row: 1; }
+  body.card-open .greeting { grid-column: 1; grid-row: 2; }
+  body.card-open .gift-layout { grid-column: 1; grid-row: 3; }
 }
 @keyframes bouquet-entrance { from { opacity: 0; transform: translateY(18px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes envelope-arrival { from { opacity: 0; transform: translateY(14px) rotate(-12deg); } to { opacity: 1; transform: translateY(0) rotate(-7deg); } }

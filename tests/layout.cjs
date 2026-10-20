@@ -5,10 +5,10 @@ const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const pageUrl = pathToFileURL(path.resolve(__dirname, '../index.html')).href;
 
-async function assertClearLayout(page, label) {
-  const layout = await page.evaluate(() => {
+async function assertClearLayout(view, label) {
+  const layout = await view.evaluate(() => {
     const card = document.getElementById('greetingCard').getBoundingClientRect();
-    const covered = ['.greeting', '.scene-footer', '.portrait-card', '#bouquetStageWrapper', '#openCard'].filter(selector => {
+    const covered = ['.greeting', '.scene-footer', '#bouquetStageWrapper', '#openCard'].filter(selector => {
       const text = document.querySelector(selector).getBoundingClientRect();
       return Math.min(text.right, card.right) - Math.max(text.left, card.left) > 1
         && Math.min(text.bottom, card.bottom) - Math.max(text.top, card.top) > 1;
@@ -38,13 +38,14 @@ async function assertClearLayout(page, label) {
     const page = await browser.newPage({ viewport: { width: 1024, height: 860 }, reducedMotion: 'reduce' });
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(pageUrl);
-    await page.locator('.portrait-photo img').first().evaluate(img => img.decode());
-    assert.equal(await page.locator('#memoryAlbum').isHidden(), true, 'photos wait until the letter opens');
-    assert.equal(await page.locator('#bouquetStageWrapper').evaluate(e => {
+    let view = page.frame('flowerView');
+    assert.equal(await view.locator('#bouquetStageWrapper').evaluate(e => {
       const r = e.getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 2;
     }), true, 'bouquet is centered on arrival');
-    await page.locator('#openCard').click();
-    await assertClearLayout(page, '1024px original regression');
+    await view.locator('#openCard').click();
+    assert.equal(await view.locator('#memoryAlbum, #viewAlbum, .album-card').count(), 0, 'opening the letter does not reveal a photo album');
+    assert.equal(await view.locator('#editCard, #cardEditor').count(), 0, 'the letter has no greeting editor');
+    await assertClearLayout(view, '1024px original regression');
 
     for (const viewport of [
       { width: 1440, height: 1000 }, { width: 1367, height: 860 },
@@ -55,77 +56,104 @@ async function assertClearLayout(page, label) {
     ]) {
       await page.setViewportSize(viewport);
       await page.waitForTimeout(50);
-      await assertClearLayout(page, `${viewport.width} × ${viewport.height}`);
+      await assertClearLayout(view, `${viewport.width} × ${viewport.height}`);
     }
     await page.setViewportSize({ width: 1222, height: 709 });
-    await page.locator('#closeCard').click();
-    await page.locator('#openCard').click();
-    const compactCard = await page.locator('#greetingCard').evaluate(e => {
+    await view.locator('#closeCard').click();
+    await view.locator('#openCard').click();
+    const compactCard = await view.locator('#greetingCard').evaluate(e => {
       const rect = e.getBoundingClientRect();
       return { top: rect.top, bottom: rect.bottom, viewport: innerHeight };
     });
     assert.ok(compactCard.top >= 0 && compactCard.bottom <= compactCard.viewport,
       'opened default letter fits vertically on a short desktop viewport');
     await page.setViewportSize({ width: 1367, height: 860 });
-    await page.locator('#editCard').click();
-    await page.locator('#recipientInput').fill('Mẹ yêu');
-    await page.locator('#messageInput').fill('Chúc mẹ luôn khỏe mạnh và bình an.\n'.repeat(30));
-    await page.locator('#senderInput').fill('Con của mẹ');
-    await page.getByRole('button', { name: 'Lưu lời chúc', exact: true }).click();
-    assert.equal(await page.locator('#cardRecipient').textContent(), 'Mẹ yêu');
-    await assertClearLayout(page, 'long personalized letter');
-    await page.locator('#viewAlbum').click();
-    await page.waitForFunction(() => document.getElementById('memoryAlbum').classList.contains('is-revealed'));
-    assert.equal(await page.locator('.album-card img').evaluateAll(images => images.every(img => img.complete && img.naturalWidth > 0)), true, 'album photos load before reveal');
-    await page.locator('#toggleAlbum').click();
-    assert.equal(await page.locator('#toggleAlbum').getAttribute('aria-expanded'), 'true');
-    for (const width of [1440, 768, 390, 320]) {
-      await page.setViewportSize({ width, height: 844 });
-      const albumLayout = await page.evaluate(() => {
-        const photos = [...document.querySelectorAll('.album-card')].map(e => e.getBoundingClientRect());
-        return {
-          overflow: document.documentElement.scrollWidth > innerWidth,
-          overlap: photos.some((a, i) => photos.slice(i + 1).some(b => Math.min(a.right, b.right) > Math.max(a.left, b.left)
-            && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top)))
-        };
-      });
-      assert.equal(albumLayout.overflow, false, `album fits at ${width}px`);
-      assert.equal(albumLayout.overlap, false, `album photos separate at ${width}px`);
-    }
-    await page.locator('#toggleAlbum').click();
-    assert.equal(await page.locator('#toggleAlbum').getAttribute('aria-expanded'), 'false');
-    await page.setViewportSize({ width: 1367, height: 860 });
-    assert.equal(await page.locator('#greetingCard').evaluate(d => d.scrollHeight <= d.clientHeight + 1), true,
+    await view.evaluate(() => localStorage.setItem('flower.greeting.20-10.v1', JSON.stringify({
+      recipient: 'Mẹ yêu',
+      message: 'Chúc mẹ luôn khỏe mạnh và bình an.\n'.repeat(30),
+      sender: 'Con của mẹ'
+    })));
+    await page.reload();
+    view = page.frame('flowerView');
+    await view.locator('#openCard').click();
+    assert.equal(await view.locator('#cardRecipient').textContent(), 'Mẹ yêu');
+    await assertClearLayout(view, 'long personalized letter');
+    assert.equal(await view.locator('#greetingCard').evaluate(d => d.scrollHeight <= d.clientHeight + 1), true,
       'Long letter grows with the document instead of clipping into a fixed overlay');
-    await page.locator('#bouquetStageWrapper').focus();
+    await view.locator('#bouquetStageWrapper').focus();
     await page.keyboard.press('Enter');
-    assert.ok((await page.locator('#roseWish').textContent()).length, 'roses remain interactive with the card open');
-    await assertClearLayout(page, 'flower wish with open letter');
-    await page.locator('#openCard').click();
-    assert.equal(await page.locator('#greetingCard').isVisible(), false, 'envelope folds the letter');
-    assert.equal(await page.locator('#openCard').getAttribute('aria-expanded'), 'false');
-    await page.locator('#openCard').click();
+    assert.ok((await view.locator('#roseWish').textContent()).length, 'roses remain interactive with the card open');
+    await assertClearLayout(view, 'flower wish with open letter');
+    await view.locator('#openCard').click();
+    assert.equal(await view.locator('#greetingCard').isVisible(), false, 'envelope folds the letter');
+    assert.equal(await view.locator('#openCard').getAttribute('aria-expanded'), 'false');
+    await view.locator('#openCard').click();
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#greetingCard').isVisible(), false);
-    assert.equal(await page.locator('#openCard').evaluate(e => e === document.activeElement), true);
-    await page.locator('#openCard').click();
-    await page.locator('#closeCard').click();
-    assert.equal(await page.locator('#greetingCard').isVisible(), false);
+    assert.equal(await view.locator('#greetingCard').isVisible(), false);
+    assert.equal(await view.locator('#openCard').evaluate(e => e === document.activeElement), true);
+    await view.locator('#openCard').click();
+    await view.locator('#closeCard').click();
+    assert.equal(await view.locator('#greetingCard').isVisible(), false);
 
     // Exercise the layout movement with animations enabled and while changing orientation.
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.locator('#openCard').click();
+    await view.locator('#openCard').click();
     await page.waitForTimeout(900);
-    await assertClearLayout(page, 'animated open');
+    await assertClearLayout(view, 'animated open');
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
-    await assertClearLayout(page, 'resize open letter to mobile');
+    await assertClearLayout(view, 'resize open letter to mobile');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(650);
-    assert.equal(await page.locator('#openCard').evaluate(e => {
+    assert.equal(await view.locator('#openCard').evaluate(e => {
       const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;
     }), true, 'closing returns the opener into view');
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const viewport of [
+      { width: 932, height: 430 }, { width: 844, height: 390 }, { width: 803, height: 411 },
+      { width: 740, height: 360 }, { width: 667, height: 375 },
+      { width: 568, height: 320 }, { width: 606, height: 280 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await view.locator('#bouquetStageWrapper').focus();
+      await page.keyboard.press('Enter');
+      const landscape = await view.evaluate(() => {
+        scrollTo(0, 0);
+        const rect = selector => document.querySelector(selector).getBoundingClientRect();
+        const envelope = rect('#openCard');
+        const footer = rect('.scene-footer');
+        return {
+          overlap: Math.min(envelope.right, footer.right) > Math.max(envelope.left, footer.left)
+            && Math.min(envelope.bottom, footer.bottom) > Math.max(envelope.top, footer.top),
+          overflow: document.documentElement.scrollWidth > innerWidth,
+          headingTop: rect('.greeting').top,
+          footerBottom: footer.bottom
+        };
+      });
+      assert.equal(landscape.overlap, false, `${viewport.width}px landscape: envelope stays clear of the flower wish`);
+      assert.equal(landscape.overflow, false, `${viewport.width}px landscape: no horizontal overflow`);
+      assert.ok(landscape.headingTop >= 0, 'landscape heading stays accessible');
+      if (viewport.height >= 320) assert.ok(landscape.footerBottom <= viewport.height, 'the flower wish fits on a landscape phone');
+
+      await view.locator('#openCard').click();
+      const navigation = await view.evaluate(() => {
+        scrollTo(0, 0);
+        const link = document.querySelector('.garden-link');
+        const rect = link.getBoundingClientRect();
+        const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return {
+          top: rect.top, bottom: rect.bottom,
+          headingTop: document.querySelector('.greeting').getBoundingClientRect().top,
+          clickable: target === link || link.contains(target)
+        };
+      });
+      assert.ok(navigation.top >= 64, `${viewport.width}px landscape with an open letter: garden link clears the camera area`);
+      assert.ok(navigation.bottom < navigation.headingTop, 'garden link stays clear of the heading');
+      assert.equal(navigation.clickable, true, 'garden link remains clickable when the letter is open');
+      await view.locator('#closeCard').click();
+    }
     assert.deepEqual(errors, []);
-    console.log('PASS: centered bouquet, deferred album with loaded photos, album spread/fold; no card/text/photo/bouquet overlap across 11 viewport sizes, resize while open, long letters, editable greeting, flower interaction, keyboard/toggle close and offline portrait. No page errors.');
+    console.log('PASS: centered bouquet, no photo album or greeting editor; no card/text/bouquet overlap across 11 viewport sizes, resize while open, long saved letters, flower interaction and keyboard/toggle close. No page errors.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

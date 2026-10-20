@@ -1,0 +1,36 @@
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #fff8fa; }
+body[data-view="garden"] { background: #bbdff5; }
+#flowerView { display: block; width: 100%; height: 100%; border: 0; }
+.app-noscript { padding: 24px; text-align: center; font: 16px/1.6 "Segoe UI", sans-serif; }
+.orientation-prompt {
+  position: fixed; inset: 0; box-sizing: border-box;
+  width: 100%; height: 100%; max-width: none; max-height: none; margin: 0;
+  padding: max(24px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+  border: 0; color: #76364d;
+  background: radial-gradient(ellipse at 50% 35%, #fffdfb, #fff5f8 58%, #f8e5ed);
+  font-family: "Segoe UI", Arial, sans-serif; overflow: auto;
+}
+.orientation-prompt[open] { display: grid; place-items: center; }
+.orientation-prompt::backdrop { background: #fff8fa; }
+.orientation-content { width: min(100%, 360px); text-align: center; }
+.orientation-note { margin: 0 0 20px; color: #a3657d; font-size: 12px; letter-spacing: 1px; }
+.orientation-illustration { display: block; width: 180px; height: 150px; margin: 0 auto 24px; }
+.orientation-phone { transform-box: fill-box; transform-origin: center; animation: turn-phone 3.6s ease-in-out infinite; }
+.orientation-content h1 { margin: 0; font: 400 clamp(26px, 7vw, 33px)/1.35 "Palatino Linotype", Georgia, serif; letter-spacing: -.5px; }
+#orientationDescription { margin: 18px auto 28px; max-width: 290px; color: #916674; font-size: 14px; line-height: 1.8; }
+.orientation-continue {
+  min-height: 46px; padding: 12px 28px; border: 1px solid #b96887; border-radius: 28px;
+  background: #b96887; color: #fffdfb; font: 14px/1.5 "Segoe UI", Arial, sans-serif;
+  cursor: pointer; touch-action: manipulation;
+}
+.orientation-continue span { margin-left: 8px; }
+.orientation-continue:hover { background: #a65b78; }
+.orientation-continue:focus-visible { outline: 2px solid #76364d; outline-offset: 5px; }
+.orientation-hint { margin: 14px 0 0; color: #a07b88; font-size: 12px; line-height: 1.6; }
+@keyframes turn-phone {
+  0%, 15%, 100% { transform: rotate(-10deg); }
+  45%, 70% { transform: rotate(80deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orientation-phone { animation: none; transform: rotate(35deg); }
+}
