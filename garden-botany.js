@@ -113,7 +113,7 @@ function createRealisticRoseSprite(config) {
     hasDewdrop = false
   } = config;
 
-  const dpr = Math.min(window.devicePixelRatio || 2, 2.2);
+  const dpr = window.FlowerPerformance.pixelRatio(2.2);
   const pad = radius * 0.62;
   const logicalSize = (radius + pad) * 2;
 
@@ -550,7 +550,7 @@ function drawBotanicalLeaf(ctx, x, y, angle, length, width, type = 'roseLeaf') {
 function createRoseBudSprite({ radius = 28, paletteKey = 'sweetBlush' } = {}) {
   const palette = ROSE_PALETTES[paletteKey] || ROSE_PALETTES.sweetBlush;
   const logicalSize = radius * 5;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = window.FlowerPerformance.pixelRatio(2);
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = Math.ceil(logicalSize * dpr);
   const c = canvas.getContext('2d');

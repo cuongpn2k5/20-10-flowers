@@ -7,13 +7,20 @@
   <meta name="description" content="Một bó hoa và tấm thiệp nhỏ, gửi những lời chúc dịu dàng nhân ngày Phụ nữ Việt Nam 20/10.">
   <title>Một bó hoa dành tặng em · 20/10</title>
   <link rel="stylesheet" href="./style.css">
+  <script src="./scene-performance.js"></script>
   <script src="./script.js" defer></script>
   <script src="./card.js" defer></script>
   <script src="./music.js" defer></script>
 </head>
 <body>
   <main>
-    <a class="garden-link" href="./garden.html">Ngắm vườn hoa <span aria-hidden="true">❀</span></a>
+    <a class="garden-link" href="./garden.html" aria-label="Ngắm vườn hoa" aria-describedby="gardenHint">
+      Ngắm vườn hoa <span aria-hidden="true">❀</span>
+      <span id="gardenHint" class="garden-invitation">
+        <svg viewBox="0 0 64 36" fill="none" aria-hidden="true"><path d="M8 31C35 34 53 23 53 7m-8 8 8-8 8 8"/></svg>
+        <span>Và em thử nhấn vào đây đi</span>
+      </span>
+    </a>
     <canvas id="ambientPetalsCanvas" aria-hidden="true"></canvas>
     <header class="greeting">
       <p class="occasion">Ngày Phụ nữ Việt Nam <span>20/10</span></p>
@@ -23,8 +30,10 @@
 
     <div class="gift-layout">
       <section class="scene-column" aria-label="Hoa và những lời chúc 20/10">
-
-
+        <p id="bouquetHint" class="bouquet-hint flower-invitation">
+          <span>Em thử nhấn vào hoa đi</span>
+          <svg viewBox="0 0 64 36" fill="none" aria-hidden="true"><path d="M8 5C35 2 53 13 53 29m-8-8 8 8 8-8"/></svg>
+        </p>
         <div class="gift-visuals">
           <div class="bouquet-composition">
             <div id="bouquetStageWrapper" role="button" tabindex="0"
@@ -42,7 +51,6 @@
         </div>
 
         <footer class="scene-footer">
-          <p id="bouquetHint" class="bouquet-hint">Chạm một bông hoa để nhận lời chúc</p>
           <p id="roseWish" class="rose-wish" role="status" aria-live="polite" aria-atomic="true"></p>
           <button class="text-button" id="replayBloom" type="button">Cho hoa nở lại <span aria-hidden="true">↻</span></button>
         </footer>

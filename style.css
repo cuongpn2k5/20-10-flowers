@@ -5,7 +5,7 @@
   --ink: #76364d;
   --muted: #916674;
   --line: #ecd3db;
-  --bouquet-size: clamp(210px, calc(100dvh - 300px), 560px);
+  --bouquet-size: clamp(210px, calc(100dvh - 400px), 560px);
   color: var(--ink);
   font-family: "Segoe UI", Arial, sans-serif;
   font-synthesis: none;
@@ -26,7 +26,7 @@ main {
   min-height: 100vh; min-height: 100dvh;
   display: grid; align-content: center;
   position: relative; isolation: isolate;
-  padding: max(72px, calc(env(safe-area-inset-top) + 64px)) clamp(16px, 3vw, 48px) max(16px, env(safe-area-inset-bottom));
+  padding: max(128px, calc(env(safe-area-inset-top) + 112px)) clamp(16px, 3vw, 48px) max(16px, env(safe-area-inset-bottom));
 }
 .garden-link {
   position: absolute; top: max(14px, env(safe-area-inset-top));
@@ -36,7 +36,20 @@ main {
   background: var(--paper); color: var(--ink); font-size: 13px; text-decoration: none;
 }
 .garden-link:hover { background: #fae7ef; }
-.garden-link span { color: var(--rose); font-size: 20px; line-height: 1; }
+.garden-link > span[aria-hidden] { color: var(--rose); font-size: 20px; line-height: 1; }
+.garden-invitation, .flower-invitation {
+  color: #9c526d; font: italic 13px/1.5 "Palatino Linotype", Georgia, serif;
+  pointer-events: none;
+}
+.garden-invitation {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: max-content; max-width: calc(100vw - 32px);
+}
+.garden-invitation svg { width: 44px; height: 26px; align-self: flex-end; margin-right: 48px; }
+.garden-invitation svg, .flower-invitation svg { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.flower-invitation { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 4px 0 0; }
+.flower-invitation svg { display: block; width: 56px; height: 28px; }
 .gift-layout {
   width: min(100%, 1040px); margin-inline: auto;
   display: grid; grid-template-columns: minmax(0, 1fr); align-items: start;
@@ -110,7 +123,7 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   .envelope-button:hover .envelope::after { transform: rotateX(35deg); }
 }
 .scene-footer { transform-origin: top left; width: min(100%, 540px); margin-top: 6px; text-align: center; position: relative; z-index: 1; }
-.bouquet-hint { font-size: 12px; color: var(--muted); margin: 0; }
+.bouquet-hint { font-size: 13px; }
 .rose-wish { font: italic 17px/1.6 Georgia, serif; margin: 6px auto 2px; max-width: 440px; min-height: 54px; text-wrap: pretty; }
 .rose-wish:empty { min-height: 0; margin: 0; }
 .rose-wish.is-new { animation: wish-arrival .4s ease both; }
@@ -157,7 +170,7 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   body.card-open .bouquet-composition { width: min(100%, var(--bouquet-size)); }
 }
 @media (max-width: 600px) {
-  main { padding-top: max(128px, calc(env(safe-area-inset-top) + 80px)); }
+  main { padding-top: max(184px, calc(env(safe-area-inset-top) + 136px)); }
   .garden-link { top: max(64px, calc(env(safe-area-inset-top) + 16px)); }
   .occasion { font-size: 12px; margin-bottom: 8px; }
   .greeting { margin-bottom: 6px; }
@@ -186,7 +199,7 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   .greeting-caption { max-width: 240px; margin: 10px auto 0; font-size: 12px; line-height: 1.6; }
   .garden-link {
     position: relative; inset: auto; grid-column: 1; grid-row: 2;
-    align-self: start; justify-self: center; min-height: 44px; padding: 8px 14px; font-size: 12px;
+    align-self: start; justify-self: center; min-height: 44px; padding: 8px 14px; margin-bottom: 54px; font-size: 12px;
   }
   .gift-layout { grid-column: 2; grid-row: 1 / 3; row-gap: 24px; }
   .gift-visuals { margin: 0; }
@@ -194,7 +207,7 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
     display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; gap: 8px;
     width: 100%; max-width: 480px; margin: 0 auto;
   }
-  #bouquetStageWrapper { justify-self: center; max-width: clamp(150px, calc(100dvh - 152px), 280px); }
+  #bouquetStageWrapper { justify-self: center; max-width: clamp(116px, calc(100dvh - 190px), 280px); }
   .envelope-button {
     position: relative; inset: auto; grid-column: 2; grid-row: 1; justify-self: center;
     width: 112px; transform: none; animation: none;
@@ -204,7 +217,9 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.08; letter-s
   .envelope-caption { font-size: 10px; }
   .envelope-action { font-size: 12px; }
   .scene-footer { width: 100%; margin-top: 8px; }
-  .bouquet-hint { font-size: 11px; }
+  .flower-invitation { width: calc(100% - 120px); align-self: start; margin: 0; font-size: 10.5px; line-height: 1.4; gap: 0; }
+  .flower-invitation svg { width: 36px; height: 20px; }
+  .garden-invitation { font-size: 11px; }
   .rose-wish { min-height: 0; margin: 4px auto 0; padding: 0; font-size: 14px; line-height: 1.5; }
   body.card-open main {
     grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: start;

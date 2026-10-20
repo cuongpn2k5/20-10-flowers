@@ -70,3 +70,10 @@ Khung ảnh dùng tỉ lệ 3:4 và tự cắt ảnh vừa khung. Có thể ch�
 Đổi nội dung thiệp mặc định tại `defaultGreeting` trong `card.js`; đổi các lời chúc theo bông hoa tại `WHISPER_NOTES` trong `script.js`. Nội dung được render dưới dạng văn bản thuần.
 
 # flowers-20-10
+
+## Hiệu năng trên điện thoại
+
+- `scene-performance.js` giới hạn canvas và ảnh vẽ sẵn ở mật độ 1.25–1.5 lần trên thiết bị cảm ứng. Máy ít nhân hoặc ít bộ nhớ dùng mức 30 khung hình/giây; các máy khác hướng tới 60 và tự giảm khi xử lý quá nặng.
+- Bó hoa lưu sẵn giấy gói và lá trên điện thoại, giảm cánh hoa bay và dừng vẽ khi bó hoa ra khỏi màn hình. Tốc độ nở hoa được tính theo thời gian thay vì tần số màn hình.
+- Vườn hoa giữ đủ các nhóm màu nhưng giảm mật độ cây và số ảnh vẽ sẵn trên điện thoại. Chuyển động tạm dừng khi mở thiệp, rồi tiếp tục khi đóng thiệp; nhạc nền vẫn chạy.
+- Chạy `node tests/performance.cjs` với Playwright để kiểm tra mức phân giải, dừng/tiếp tục hoạt ảnh và đo thời gian xử lý dưới mô phỏng CPU chậm. Có thể đặt `PLAYWRIGHT_CHANNEL=msedge` để dùng Edge đã cài. Kết quả mô phỏng không thay thế phép đo trên điện thoại thật.

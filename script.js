@@ -1,3 +1,5 @@
+const sceneQuality = window.FlowerPerformance;
+
 function createSeededRandom(seed = 1) {
   let s = seed % 2147483647;
   if (s <= 0) s += 2147483646;
@@ -94,7 +96,7 @@ function createRealisticRoseSprite(config) {
     hasDewdrop = false
   } = config;
 
-  const dpr = Math.min(window.devicePixelRatio || 2, 2.2);
+  const dpr = sceneQuality.pixelRatio(2.2);
   const pad = radius * 0.62;
   const logicalSize = (radius + pad) * 2;
 
@@ -529,7 +531,7 @@ function drawBotanicalLeaf(ctx, x, y, angle, length, width, type = 'roseLeaf') {
  * Pre-renders a delicate cloud sprig of White Gypsophila (Hoa Baby) & Pink Waxflower
  */
 function createBabyBreathClusterSprite(seed = 1) {
-  const dpr = Math.min(window.devicePixelRatio || 2, 2.5);
+  const dpr = sceneQuality.pixelRatio(2.5);
   const size = 150;
   const canvas = document.createElement('canvas');
   canvas.width = size * dpr;
@@ -1041,7 +1043,13 @@ const ambientCanvas = document.getElementById('ambientPetalsCanvas');
 const aCtx = ambientCanvas.getContext('2d');
 
 const roseNodes = [];
-const babySprites = [];
+const babySprites = { back: [], front: [] };
+const backFoliage = FOLIAGE_LAYOUT.filter(leaf => leaf.layer === 'back');
+const frontFoliage = FOLIAGE_LAYOUT.filter(leaf => leaf.layer === 'front');
+const whorlDelays = [0, .12, .24, .34];
+const closedScales = [.44, .36, .28, .38];
+const overBloomBoost = [.32, .24, .16, .10];
+const twistAngles = [.52, -.78, 1.05, -1.35];
 let pointerX = -9999;
 let pointerY = -9999;
 let parallaxTargetX = 0;
@@ -1056,11 +1064,16 @@ let winH = window.innerHeight;
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 let reducedMotion = motionPreference.matches;
 let sceneAnimationFrame = null;
+let bouquetVisible = true;
+const frameClock = sceneQuality.createClock();
+let simulationRemainder = 0;
+const mobilePaper = {};
+const mobileLeaves = new Map();
 let keyboardRoseIndex = 0;
 const bloomTimers = new Set();
 
 function requestSceneRender() {
-  if (sceneAnimationFrame === null && !document.hidden) {
+  if (sceneAnimationFrame === null && !document.hidden && bouquetVisible) {
     sceneAnimationFrame = requestAnimationFrame(renderBouquetScene);
   }
 }
@@ -1093,6 +1106,27 @@ function settleBouquet() {
 }
 
 function initBotanicalAssets() {
+  if (sceneQuality.mobile) {
+    const dpr = sceneQuality.pixelRatio();
+    for (const side of ['back', 'front']) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = Math.ceil(700 * dpr);
+      const context = canvas.getContext('2d');
+      context.scale(dpr, dpr);
+      if (side === 'back') drawWrappingPaperBack(context, 350, 350, 1);
+      else drawWrappingPaperFrontAndRibbon(context, 350, 350, 1, 0);
+      mobilePaper[side] = canvas;
+    }
+    FOLIAGE_LAYOUT.forEach(leaf => {
+      const canvas = document.createElement('canvas');
+      const width = leaf.len + 32, height = leaf.w * 2 + 32;
+      canvas.width = Math.ceil(width * dpr); canvas.height = Math.ceil(height * dpr);
+      const context = canvas.getContext('2d');
+      context.scale(dpr, dpr);
+      drawBotanicalLeaf(context, 16, leaf.w + 16, 0, leaf.len, leaf.w, leaf.type);
+      mobileLeaves.set(leaf, { canvas, width, height });
+    });
+  }
   BOUQUET_LAYOUT.forEach((item, index) => {
     const sprite = createRealisticRoseSprite({ ...item, radius: item.r });
     roseNodes.push({
@@ -1119,7 +1153,7 @@ function initBotanicalAssets() {
   roseNodes.sort((a, b) => a.z - b.z);
 
   BABY_BREATH_LAYOUT.forEach(item => {
-    babySprites.push({
+    babySprites[item.layer].push({
       ...item,
       sprite: createBabyBreathClusterSprite(item.seed)
     });
@@ -1165,17 +1199,21 @@ function triggerBouquetBloomWave(originX = 0, originY = -30, mode = 'grand') {
 }
 
 function resizeCanvases() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = sceneQuality.pixelRatio(2.5);
   // Layout dimensions stay stable while the entrance animation scales the wrapper.
   stageW = bouquetWrapper.clientWidth || 560;
   stageH = bouquetWrapper.clientHeight || 560;
-  bouquetCanvas.width = Math.round(stageW * dpr);
-  bouquetCanvas.height = Math.round(stageH * dpr);
+  if (bouquetCanvas.width !== Math.round(stageW * dpr) || bouquetCanvas.height !== Math.round(stageH * dpr)) {
+    bouquetCanvas.width = Math.round(stageW * dpr);
+    bouquetCanvas.height = Math.round(stageH * dpr);
+  }
   bCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   winW = window.innerWidth;
   winH = window.innerHeight;
-  ambientCanvas.width = Math.round(winW * dpr);
-  ambientCanvas.height = Math.round(winH * dpr);
+  if (ambientCanvas.width !== Math.round(winW * dpr) || ambientCanvas.height !== Math.round(winH * dpr)) {
+    ambientCanvas.width = Math.round(winW * dpr);
+    ambientCanvas.height = Math.round(winH * dpr);
+  }
   aCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   requestSceneRender();
 }
@@ -1210,7 +1248,7 @@ function createPetalParticle(customX, customY, isBurst = false) {
 
 function initAmbientPetals() {
   if (reducedMotion) return;
-  const count = window.innerWidth < 768 ? 10 : 16;
+  const count = sceneQuality.mobile ? (sceneQuality.lowPower ? 6 : 8) : window.innerWidth < 768 ? 10 : 16;
   for (let i = 0; i < count; i++) {
     const p = createPetalParticle(Math.random() * winW, Math.random() * winH, false);
     fallingPetals.push(p);
@@ -1219,7 +1257,9 @@ function initAmbientPetals() {
 
 function spawnPetalBurst(screenX, screenY, count = 8) {
   if (reducedMotion || document.hidden) return;
-  count = Math.min(count, Math.max(0, 68 - fallingPetals.length), Math.max(0, 96 - burstSparkles.length - 4));
+  const maxPetals = sceneQuality.mobile ? 24 : 68;
+  const maxSparkles = sceneQuality.mobile ? 24 : 96;
+  count = Math.min(count, Math.max(0, maxPetals - fallingPetals.length), Math.max(0, maxSparkles - burstSparkles.length - 4));
   if (count <= 0) return;
   for (let i = 0; i < count; i++) {
     fallingPetals.push(createPetalParticle(screenX, screenY, true));
@@ -1239,23 +1279,23 @@ function spawnPetalBurst(screenX, screenY, count = 8) {
   }
 }
 
-function renderAmbientPetals(time) {
+function renderAmbientPetals(time, step = 1) {
   aCtx.clearRect(0, 0, winW, winH);
 
   // Update & draw falling rose petals
   for (let i = fallingPetals.length - 1; i >= 0; i--) {
     const p = fallingPetals[i];
-    p.swayPhase += 0.018;
-    p.flipPhase += p.vFlip;
-    p.rot += p.vRot;
+    p.swayPhase += 0.018 * step;
+    p.flipPhase += p.vFlip * step;
+    p.rot += p.vRot * step;
 
     if (p.isBurst) {
-      p.vy += 0.065; // gentle gravity after burst
-      p.vx *= 0.99;
+      p.vy += 0.065 * step; // gentle gravity after burst
+      p.vx *= Math.pow(0.99, step);
     }
 
-    p.x += p.vx + Math.sin(p.swayPhase) * 0.55;
-    p.y += p.vy;
+    p.x += (p.vx + Math.sin(p.swayPhase) * 0.55) * step;
+    p.y += p.vy * step;
 
     // Recycle normal ambient petals; remove finished burst petals
     if (p.y > winH + 40) {
@@ -1295,9 +1335,9 @@ function renderAmbientPetals(time) {
   // Update & draw warm light sparkles
   for (let i = burstSparkles.length - 1; i >= 0; i--) {
     const s = burstSparkles[i];
-    s.x += s.vx;
-    s.y += s.vy;
-    s.alpha -= 0.022;
+    s.x += s.vx * step;
+    s.y += s.vy * step;
+    s.alpha -= 0.022 * step;
     if (s.alpha <= 0) {
       burstSparkles.splice(i, 1);
       continue;
@@ -1306,7 +1346,7 @@ function renderAmbientPetals(time) {
     aCtx.globalAlpha = s.alpha;
     aCtx.fillStyle = s.color;
     aCtx.shadowColor = '#F48FB1';
-    aCtx.shadowBlur = 8;
+    aCtx.shadowBlur = sceneQuality.mobile ? 0 : 8;
     aCtx.beginPath();
     aCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
     aCtx.fill();
@@ -1316,13 +1356,20 @@ function renderAmbientPetals(time) {
 
 function renderBouquetScene(timestamp) {
   sceneAnimationFrame = null;
-  if (document.hidden) return;
+  if (document.hidden || !bouquetVisible) return;
+  const delta = frameClock.take(timestamp, reducedMotion);
+  if (!delta) { requestSceneRender(); return; }
+  const step = delta / (1000 / 60);
+  simulationRemainder += step;
+  const physicsSteps = Math.floor(simulationRemainder);
+  simulationRemainder -= physicsSteps;
   const time = reducedMotion ? 0 : timestamp * 0.001;
   bCtx.clearRect(0, 0, stageW, stageH);
 
   // Smoothly interpolate parallax
-  parallaxX += (parallaxTargetX - parallaxX) * 0.06;
-  parallaxY += (parallaxTargetY - parallaxY) * 0.06;
+  const smoothing = 1 - Math.pow(.94, step);
+  parallaxX += (parallaxTargetX - parallaxX) * smoothing;
+  parallaxY += (parallaxTargetY - parallaxY) * smoothing;
 
   // Responsive scale relative to a 580x580 canonical coordinate frame
   const baseScale = Math.min(stageW, stageH) / 650;
@@ -1335,24 +1382,25 @@ function renderBouquetScene(timestamp) {
   bCtx.rotate(globalSwayRot);
 
   // 1. Back Wrapping Paper & Soft Tissue Lining
-  drawWrappingPaperBack(bCtx, 0, 0, baseScale);
+  if (mobilePaper.back) bCtx.drawImage(mobilePaper.back, -350 * baseScale, -350 * baseScale, 700 * baseScale, 700 * baseScale);
+  else drawWrappingPaperBack(bCtx, 0, 0, baseScale);
 
   // 2. Back Eucalyptus & Serrated Rose Foliage
-  FOLIAGE_LAYOUT.filter(f => f.layer === 'back').forEach((leaf, idx) => {
+  backFoliage.forEach((leaf, idx) => {
     const leafSway = Math.sin(time * 1.6 + idx) * 0.035;
-    drawBotanicalLeaf(
+    drawBouquetLeaf(
       bCtx,
       leaf.x * baseScale,
       leaf.y * baseScale,
       leaf.angle + leafSway,
       leaf.len * baseScale,
       leaf.w * baseScale,
-      leaf.type
+      leaf.type, leaf, baseScale
     );
   });
 
   // 3. Back Gypsophila (Hoa Baby Trắng) Clouds
-  babySprites.filter(b => b.layer === 'back').forEach((b, idx) => {
+  babySprites.back.forEach((b, idx) => {
     const bSway = Math.cos(time * 1.5 + idx) * 0.04;
     bCtx.save();
     bCtx.translate(b.x * baseScale, b.y * baseScale);
@@ -1429,18 +1477,20 @@ function renderBouquetScene(timestamp) {
     }
 
     // Spring integration for position & overall scale
-    rose.vx = (rose.vx + (targetOx - rose.offsetX) * 0.12) * 0.78;
-    rose.vy = (rose.vy + (targetOy - rose.offsetY) * 0.12) * 0.78;
-    rose.offsetX += rose.vx;
-    rose.offsetY += rose.vy;
+    for (let stepIndex = 0; stepIndex < physicsSteps; stepIndex++) {
+      rose.vx = (rose.vx + (targetOx - rose.offsetX) * 0.12) * 0.78;
+      rose.vy = (rose.vy + (targetOy - rose.offsetY) * 0.12) * 0.78;
+      rose.offsetX += rose.vx;
+      rose.offsetY += rose.vy;
 
-    rose.vScale = (rose.vScale + (targetScale - rose.scaleOffset) * 0.14) * 0.76;
-    rose.scaleOffset += rose.vScale;
+      rose.vScale = (rose.vScale + (targetScale - rose.scaleOffset) * 0.14) * 0.76;
+      rose.scaleOffset += rose.vScale;
 
-    // Under-damped spring integration for multi-layer petal unfurling (bloom)
-    rose.vBloom = (rose.vBloom + (rose.targetBloom - rose.bloom) * 0.095) * 0.79;
-    rose.bloom += rose.vBloom;
-    rose.flareGlow *= 0.94;
+      // Under-damped spring integration for multi-layer petal unfurling (bloom)
+      rose.vBloom = (rose.vBloom + (rose.targetBloom - rose.bloom) * 0.095) * 0.79;
+      rose.bloom += rose.vBloom;
+      rose.flareGlow *= 0.94;
+    }
 
     const rx = (rose.x + rose.offsetX) * baseScale;
     const ry = (rose.y + rose.offsetY) * baseScale;
@@ -1463,11 +1513,6 @@ function renderBouquetScene(timestamp) {
 
     // 4B. Draw each of the 4 Concentric Petal Whorls with staggered unfurling & spiral rotation!
     // whorlIdx 0 = Outer Guard Petals, 1 = Mid-Outer, 2 = Inner Velvet, 3 = Center Spiral Core
-    const whorlDelays = [0.0, 0.12, 0.24, 0.34];
-    const closedScales = [0.44, 0.36, 0.28, 0.38];
-    const overBloomBoost = [0.32, 0.24, 0.16, 0.10];
-    const twistAngles = [0.52, -0.78, 1.05, -1.35];
-
     for (let wIdx = 0; wIdx < 4; wIdx++) {
       const wCanvas = rose.sprite.whorlCanvases[wIdx];
       // Calculate staggered unfurling progress for this specific petal whorl
@@ -1523,20 +1568,20 @@ function renderBouquetScene(timestamp) {
   });
 
   // 5. Foreground Cascading Leaves & Airy Gypsophila Tucked Between Roses
-  FOLIAGE_LAYOUT.filter(f => f.layer === 'front').forEach((leaf, idx) => {
+  frontFoliage.forEach((leaf, idx) => {
     const leafSway = Math.sin(time * 1.8 + idx * 2) * 0.03;
-    drawBotanicalLeaf(
+    drawBouquetLeaf(
       bCtx,
       leaf.x * baseScale,
       leaf.y * baseScale,
       leaf.angle + leafSway,
       leaf.len * baseScale,
       leaf.w * baseScale,
-      leaf.type
+      leaf.type, leaf, baseScale
     );
   });
 
-  babySprites.filter(b => b.layer === 'front').forEach((b, idx) => {
+  babySprites.front.forEach((b, idx) => {
     const bSway = Math.sin(time * 1.6 + idx) * 0.035;
     bCtx.save();
     bCtx.translate(b.x * baseScale, b.y * baseScale);
@@ -1547,13 +1592,23 @@ function renderBouquetScene(timestamp) {
   });
 
   // 6. Front Wrapping Paper Cone, Satin Ribbon Bow & Swinging Gift Tag
-  drawWrappingPaperFrontAndRibbon(bCtx, 0, 0, baseScale, time);
+  if (mobilePaper.front) bCtx.drawImage(mobilePaper.front, -350 * baseScale, -350 * baseScale, 700 * baseScale, 700 * baseScale);
+  else drawWrappingPaperFrontAndRibbon(bCtx, 0, 0, baseScale, time);
 
   bCtx.restore();
 
   // Soft falling petals, with stronger wind-borne bursts on touch and bloom.
-  renderAmbientPetals(time);
+  renderAmbientPetals(time, step);
+  frameClock.finish();
   if (!reducedMotion) requestSceneRender();
+}
+
+function drawBouquetLeaf(context, x, y, angle, length, width, type, leaf, scale) {
+  const sprite = mobileLeaves.get(leaf);
+  if (!sprite) { drawBotanicalLeaf(context, x, y, angle, length, width, type); return; }
+  context.save(); context.translate(x, y); context.rotate(angle); context.scale(scale, scale);
+  context.drawImage(sprite.canvas, -16, -leaf.w - 16, sprite.width, sprite.height);
+  context.restore();
 }
 
 function announceRose(rose) {
@@ -1610,8 +1665,26 @@ window.addEventListener('load', () => {
   // Show the invitation only after the initial flower wave has settled.
   setTimeout(() => document.dispatchEvent(new Event('bouquet:ready')), reducedMotion ? 0 : 1900);
   new ResizeObserver(resizeCanvases).observe(bouquetWrapper);
+  new IntersectionObserver(entries => {
+    const visible = entries[0].isIntersecting;
+    if (visible === bouquetVisible) return;
+    bouquetVisible = visible;
+    frameClock.reset();
+    simulationRemainder = 0;
+    if (!visible) {
+      cancelAnimationFrame(sceneAnimationFrame);
+      sceneAnimationFrame = null;
+      settleBouquet();
+      aCtx.clearRect(0, 0, winW, winH);
+    } else {
+      if (!fallingPetals.length) initAmbientPetals();
+      requestSceneRender();
+    }
+  }).observe(bouquetWrapper);
   window.addEventListener('resize', resizeCanvases);
   document.addEventListener('visibilitychange', () => {
+    frameClock.reset();
+    simulationRemainder = 0;
     if (document.hidden) {
       cancelAnimationFrame(sceneAnimationFrame);
       sceneAnimationFrame = null;

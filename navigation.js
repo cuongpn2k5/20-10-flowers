@@ -5,25 +5,6 @@
     bouquet: { entry: 'index.html', content: 'bouquet.html', title: 'Một bó hoa dành tặng em · 20/10', color: '#fff8fa' },
     garden: { entry: 'garden.html', content: 'garden-view.html', title: 'Cả một vườn thương · 20/10', color: '#bbdff5' }
   };
-  const prompt = document.getElementById('orientationPrompt');
-  const portraitPhone = matchMedia('(max-width: 600px) and (orientation: portrait) and (pointer: coarse)');
-  const orientationKey = 'flower.orientation.20-10.v1';
-  let started = false;
-
-  function enterSite() {
-    if (prompt.open) prompt.close();
-    if (started) return;
-    started = true;
-    portraitPhone.removeEventListener('change', onOrientationChange);
-    try { sessionStorage.setItem(orientationKey, 'seen'); } catch {
-      // Dismissing the reminder does not require browser storage.
-    }
-    showView(currentView());
-  }
-
-  function onOrientationChange() {
-    if (!portraitPhone.matches && prompt.open) enterSite();
-  }
 
   function currentView() {
     const requested = new URL(location.href).searchParams.get('view');
@@ -61,16 +42,7 @@
     if (event.source !== document.getElementById('flowerView').contentWindow) return;
     if (event.data?.type === 'flowers:navigate') showView(event.data.view, true);
   });
-  window.addEventListener('popstate', () => { if (started) showView(currentView()); });
+  window.addEventListener('popstate', () => showView(currentView()));
   history.replaceState({ view: currentView() }, '', location.href);
-  let seen = false;
-  try { seen = sessionStorage.getItem(orientationKey) === 'seen'; } catch {
-    // The reminder can still be dismissed for the current visit.
-  }
-  prompt.addEventListener('close', enterSite);
-  document.getElementById('continuePortrait').addEventListener('click', enterSite);
-  if (portraitPhone.matches && !seen) {
-    portraitPhone.addEventListener('change', onOrientationChange);
-    prompt.showModal();
-  } else enterSite();
+  showView(currentView());
 })();

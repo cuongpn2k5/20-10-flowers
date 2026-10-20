@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#bbdff5">
   <meta name="description" content="Chạm một bông hoa, đánh thức cả khu vườn và nhận một lời chúc dịu dàng ngày 20/10.">
   <title>Cả một vườn thương · 20/10</title>
+  <script src="./scene-performance.js"></script>
   <link rel="stylesheet" href="./music.css">
   <script src="./music.js" defer></script>
   <link rel="preload" href="./assets/fonts/noto-serif-regular.woff2" as="font" type="font/woff2" crossorigin>
@@ -206,6 +207,8 @@
       const actions = document.getElementById('actions');
       const status = document.getElementById('status');
       const motion = matchMedia('(prefers-reduced-motion: reduce)');
+      const quality = window.FlowerPerformance;
+      const frameClock = quality.createClock();
       const TAU = Math.PI * 2;
       const clamp = n => Math.max(0, Math.min(1, n));
       const ease = n => 1 - Math.pow(1 - clamp(n), 3);
@@ -240,7 +243,8 @@
         rose.whorlCanvases.forEach(layer => c.drawImage(layer, 0, 0));
         return { ...rose, openCanvas };
       }
-      const sprites = paletteKeys.flatMap((paletteKey, i) => ['garden', 'classic', 'peony'].map((variety, j) => prepareRose({
+      const varieties = ['garden', 'classic', 'peony'];
+      const sprites = paletteKeys.flatMap((paletteKey, i) => (quality.mobile ? [varieties[i % 3]] : varieties).map((variety, j) => prepareRose({
         radius: 46, paletteKey, variety, seed: 2010 + i * 107 + j * 41,
         tiltX: (j - 1) * .65, tiltY: -.2 + (i % 5) * .08, hasDewdrop: j === 0
       })));
@@ -286,7 +290,7 @@
       const flowers = [];
       // Distant flowers are smaller and paler; foreground flowers grow taller and fuller.
       for (let row = 0; row < 5; row++) {
-        const count = 24 + row * 2;
+        const count = quality.mobile ? (quality.lowPower ? 10 : 14) + row : 24 + row * 2;
         for (let i = 0; i < count; i++) {
           const x = (i + random()) / count;
           flowers.push({
@@ -318,10 +322,10 @@
         });
       }
       flowers.sort((a, b) => a.depth - b.depth);
-      const petals = Array.from({ length: 18 }, () => ({ x: random(), y: random(), phase: random() * TAU, size: 3 + random() * 4, speed: 9 + random() * 12 }));
+      const petals = Array.from({ length: quality.mobile ? 8 : 18 }, () => ({ x: random(), y: random(), phase: random() * TAU, size: 3 + random() * 4, speed: 9 + random() * 12 }));
       const hero = { x: .5, y: .46, radius: 76, stem: .25, bend: 5, phase: 0, rotation: -.15, tilt: .95, offsetX: 0, offsetY: 0, hover: 0 };
       const pointer = { x: -1000, y: -1000 };
-      let width = 0, height = 0, scale = 1, frame = 0, lastFrame = 0;
+      let width = 0, height = 0, scale = 1, frame = 0;
       let sceneTime = 0;
       let state = 'idle', started = 0, pausedAt = 0;
 
@@ -367,14 +371,15 @@
         ctx.stroke();
         if (growth > .15) {
           // Attach each leaf to the actual curved stem so the whole plant moves together.
-          (isHero ? [.42, .64] : [.38, .64]).forEach((t, i) => {
+          for (let i = 0; i < 2; i++) {
+            const t = i ? .64 : isHero ? .42 : .38;
             const u = 1 - t;
             const lx = u ** 3 * baseX + 3 * u * u * t * controlX1 + 3 * u * t * t * controlX2 + t ** 3 * headX;
             const ly = u ** 3 * root + 3 * u * u * t * controlY1 + 3 * u * t * t * controlY2 + t ** 3 * headY;
             const length = r * (isHero ? .85 : .95) * p;
             leaf(lx, ly, i ? -1 : 1, length, wind * .085);
             if (isHero) leaf(lx + (i ? -10 : 10) * scale, ly - 5 * scale, i ? -1 : 1, length * .6, -.5 + wind * .09);
-          });
+          }
         }
         ctx.translate(headX, headY);
         ctx.rotate(f.rotation + wind * .095 + f.offsetX * .003);
@@ -438,7 +443,11 @@
       }
 
       function openCard() {
-        if (!card.open) card.showModal();
+        if (!card.open) {
+          card.showModal();
+          cancelAnimationFrame(frame); frame = 0;
+          frameClock.reset();
+        }
       }
       function finish() {
         state = 'ready'; garden.classList.add('is-ready'); actions.hidden = false;
@@ -447,8 +456,9 @@
       }
       function draw(time) {
         frame = 0;
-        const delta = lastFrame ? Math.min(50, time - lastFrame) : 16.67;
-        lastFrame = time;
+        if (document.hidden) return;
+        const delta = frameClock.take(time, motion.matches);
+        if (!delta) { frame = requestAnimationFrame(draw); return; }
         if (!motion.matches) sceneTime += delta;
         const smoothing = motion.matches ? 1 : 1 - Math.exp(-delta / 140);
         ctx.clearRect(0, 0, width, height);
@@ -461,7 +471,8 @@
         drawFlower(hero, state === 'idle' ? .72 : state === 'ready' || instant ? 1 : .72 + .28 * clamp(elapsed / 1.8), sceneTime, smoothing, true);
         if (state !== 'idle' && !motion.matches) drawPetals(elapsed, sceneTime);
         if (state === 'growing' && (instant || elapsed >= 6.8)) finish();
-        if (!motion.matches && !document.hidden) frame = requestAnimationFrame(draw);
+        frameClock.finish();
+        if (!motion.matches && !document.hidden && !card.open) frame = requestAnimationFrame(draw);
       }
       function render() {
         cancelAnimationFrame(frame);
@@ -477,8 +488,11 @@
         const rect = garden.getBoundingClientRect();
         width = rect.width; height = rect.height;
         scale = Math.min(1.22, Math.max(.68, width / 1100));
-        const dpr = Math.min(devicePixelRatio || 1, 2);
-        canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+        const dpr = quality.pixelRatio(2);
+        if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+          canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+        }
+        frameClock.reset();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0); render();
       }
       function start() {
@@ -493,7 +507,10 @@
       document.getElementById('readCard').addEventListener('click', openCard);
       document.getElementById('closeCard').addEventListener('click', closeCard);
       document.getElementById('viewGarden').addEventListener('click', closeCard);
-      card.addEventListener('close', () => document.getElementById('readCard').focus({ preventScroll: true }));
+      card.addEventListener('close', () => {
+        document.getElementById('readCard').focus({ preventScroll: true });
+        frameClock.reset(); render();
+      });
       document.getElementById('replay').addEventListener('click', () => {
         state = 'idle'; garden.classList.remove('is-growing', 'is-ready');
         actions.hidden = true; bloomButton.hidden = false; status.textContent = '';
@@ -501,10 +518,11 @@
         bloomButton.focus({ preventScroll: true }); render();
       });
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) { pausedAt = performance.now(); cancelAnimationFrame(frame); frame = 0; lastFrame = 0; }
+        frameClock.reset();
+        if (document.hidden) { pausedAt = performance.now(); cancelAnimationFrame(frame); frame = 0; }
         else { if (pausedAt && state === 'growing') started += performance.now() - pausedAt; pausedAt = 0; render(); }
       });
-      motion.addEventListener('change', render);
+      motion.addEventListener('change', () => { frameClock.reset(); render(); });
       new ResizeObserver(resize).observe(garden);
       resize();
     })();

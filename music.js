@@ -18,9 +18,13 @@
       showPlayback(event.data.playing, event.data.failed);
     });
     buttons.forEach(button => button.addEventListener('click', () => send('flowers:music-toggle')));
+    const bouquet = document.getElementById('bouquetStageWrapper');
+    bouquet?.addEventListener('click', () => send('flowers:music-start'));
+    bouquet?.addEventListener('keydown', event => {
+      if (['Enter', ' '].includes(event.key)) send('flowers:music-start');
+    });
     document.addEventListener('click', event => {
       if (!(event.target instanceof Element) || event.target.closest('[data-music-toggle]')) return;
-      send('flowers:music-start');
       const link = event.target.closest('a[href]');
       if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
         || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
@@ -32,10 +36,6 @@
         send('flowers:navigate', { view });
         break;
       }
-    });
-    document.addEventListener('keydown', event => {
-      if (event.target instanceof Element && event.target.closest('[data-music-toggle]')) return;
-      if (['Enter', ' '].includes(event.key)) send('flowers:music-start');
     });
     send('flowers:music-ready');
     return;
@@ -49,6 +49,7 @@
   }
   const storageKey = 'flower.music.20-10.v1';
   let enabled = true;
+  let activated = false;
   let position = 0;
   let starting = false;
 
@@ -76,7 +77,7 @@
   }
 
   async function playMusic() {
-    if (!enabled || starting || !audio.paused) return;
+    if (!activated || !enabled || starting || !audio.paused) return;
     starting = true;
     try {
       if (audio.error) audio.load();
@@ -101,7 +102,10 @@
 
   function toggleMusic() {
     enabled = audio.paused;
-    if (enabled) playMusic();
+    if (enabled) {
+      activated = true;
+      playMusic();
+    }
     else audio.pause();
     savePlayback();
   }
@@ -109,20 +113,14 @@
   window.addEventListener('message', event => {
     if (event.source !== document.getElementById('flowerView')?.contentWindow) return;
     if (event.data?.type === 'flowers:music-ready') updateButtons();
-    if (event.data?.type === 'flowers:music-start') playMusic();
+    if (event.data?.type === 'flowers:music-start') {
+      activated = true;
+      playMusic();
+    }
     if (event.data?.type === 'flowers:music-toggle') toggleMusic();
   });
 
-  function startOnInteraction(event) {
-    if (event.target instanceof Element && event.target.closest('[data-music-toggle]')) return;
-    if (event.type === 'keydown' && !['Enter', ' '].includes(event.key)) return;
-    playMusic();
-  }
-
-  document.addEventListener('click', startOnInteraction);
-  document.addEventListener('keydown', startOnInteraction);
   window.addEventListener('pagehide', savePlayback);
   window.addEventListener('pageshow', playMusic);
   updateButtons();
-  playMusic();
 })();
